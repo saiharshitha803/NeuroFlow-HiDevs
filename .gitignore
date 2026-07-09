@@ -81,3 +81,5 @@ build/
 
 # Jupyter
 .ipynb_checkpoints/
+
+.env
