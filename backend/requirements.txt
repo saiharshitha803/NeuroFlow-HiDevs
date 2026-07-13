@@ -14,3 +14,5 @@ opentelemetry-instrumentation-fastapi
 opentelemetry-exporter-otlp
 
 mlflow
+
+python-multipart
