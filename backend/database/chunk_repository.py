@@ -7,7 +7,7 @@ from backend.database.connection import db
 
 class ChunkRepository:
     """
-   Repository for storing and retrieving document chunks.
+    Repository for storing and retrieving document chunks.
     """
 
     async def create(
@@ -17,12 +17,11 @@ class ChunkRepository:
         content: str,
         metadata: dict[str, Any],
     ) -> str:
-        """
-        Insert a new chunk into the database.
-        """
 
         chunk_id = str(uuid.uuid4())
+
         token_count = len(content.split())
+
 
         async with db.pool.acquire() as conn:
 
@@ -48,15 +47,16 @@ class ChunkRepository:
                 json.dumps(metadata),
             )
 
+
         return chunk_id
+
+
 
     async def list_chunks(
         self,
         document_id: str,
     ) -> list[dict[str, Any]]:
-        """
-        Return all chunks belonging to a document.
-        """
+
 
         async with db.pool.acquire() as conn:
 
@@ -70,15 +70,16 @@ class ChunkRepository:
                 document_id,
             )
 
+
         return [dict(row) for row in rows]
+
+
 
     async def count(
         self,
         document_id: str,
     ) -> int:
-        """
-        Return number of chunks for a document.
-        """
+
 
         async with db.pool.acquire() as conn:
 
@@ -91,13 +92,13 @@ class ChunkRepository:
                 document_id,
             )
 
+
+
     async def delete(
         self,
         document_id: str,
     ) -> None:
-        """
-        Delete all chunks for a document.
-        """
+
 
         async with db.pool.acquire() as conn:
 
@@ -108,3 +109,88 @@ class ChunkRepository:
                 """,
                 document_id,
             )
+
+
+
+    async def full_text_search(
+        self,
+        query: str,
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        """
+        Sparse retrieval using PostgreSQL Full Text Search.
+        """
+
+        async with db.pool.acquire() as conn:
+
+            rows = await conn.fetch(
+                """
+                SELECT
+                    *,
+                    ts_rank_cd(
+                        to_tsvector('english', content),
+                        plainto_tsquery('english', $1)
+                    ) AS sparse_score
+
+                FROM chunks
+
+                WHERE
+                    to_tsvector('english', content)
+                    @@
+                    plainto_tsquery('english', $1)
+
+                ORDER BY sparse_score DESC
+
+                LIMIT $2
+                """,
+                query,
+                limit,
+            )
+
+
+        return [dict(row) for row in rows]
+
+
+
+    async def metadata_search(
+        self,
+        filters: dict[str, Any],
+        limit: int = 20,
+    ) -> list[dict[str, Any]]:
+        """
+        Metadata retrieval using JSONB filtering.
+
+        Example:
+
+        {
+            "year": 2023,
+            "topic": "climate"
+        }
+
+        Uses PostgreSQL JSONB containment:
+        
+        metadata @> jsonb
+        """
+
+        if not filters:
+
+            return []
+
+
+        async with db.pool.acquire() as conn:
+
+            rows = await conn.fetch(
+                """
+                SELECT *
+                FROM chunks
+
+                WHERE metadata @> $1::jsonb
+
+                LIMIT $2
+                """,
+                json.dumps(filters),
+                limit,
+            )
+
+
+        return [dict(row) for row in rows]

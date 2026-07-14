@@ -1,74 +1,146 @@
+from typing import Any
+import time
+
 from backend.retrieval.retriever import Retriever
+from backend.retrieval.context_assembler import ContextAssembler
 from backend.generation.generator import Generator
 
 
 class RAGPipeline:
     """
-    End-to-end Retrieval Augmented Generation pipeline.
+    End-to-End Retrieval Augmented Generation pipeline.
+
+    Flow:
+
+    User Query
+        |
+        ↓
+    Hybrid Retrieval
+        |
+        ↓
+    RRF Fusion
+        |
+        ↓
+    Cross Encoder Reranking
+        |
+        ↓
+    Context Assembly
+        |
+        ↓
+    Generator
+        |
+        ↓
+    Final Answer
     """
 
-    def __init__(self, retriever=None, generator=None):
-        self.retriever = retriever or Retriever()
-        self.generator = generator or Generator()
+    def __init__(
+        self,
+        retriever=None,
+        generator=None,
+        context_assembler=None,
+    ):
 
-    async def run(self, query: str):
-        # Retrieve relevant chunks
-        chunks = await self.retriever.retrieve(query)
+        self.retriever = (
+            retriever
+            or Retriever()
+        )
 
-        # Build context
-        context_parts = []
+        self.generator = (
+            generator
+            or Generator()
+        )
 
-        for chunk in chunks:
+        self.context_assembler = (
+            context_assembler
+            or ContextAssembler()
+        )
 
-            # Dictionary returned from database
-            if isinstance(chunk, dict):
-                context_parts.append(chunk.get("content", ""))
 
-            # Object with .content
-            elif hasattr(chunk, "content"):
-                context_parts.append(chunk.content)
+    async def run(
+        self,
+        query: str,
+        top_k: int = 5,
+    ) -> dict[str, Any]:
 
-            # Object with .text
-            elif hasattr(chunk, "text"):
-                context_parts.append(chunk.text)
+        start_time = time.perf_counter()
 
-            else:
-                context_parts.append(str(chunk))
 
-        context = "\n\n".join(context_parts)
+        # -----------------------------
+        # 1. Retrieve relevant chunks
+        # -----------------------------
 
-        # Generate answer
+        chunks = await self.retriever.hybrid_retrieve(
+            query=query,
+            k=top_k,
+        )
+
+
+        # -----------------------------
+        # 2. Assemble context
+        # -----------------------------
+
+        assembled = self.context_assembler.assemble(
+            chunks
+        )
+
+
+        context = assembled["context"]
+
+        sources = assembled["sources"]
+
+        used_chunks = assembled["chunks_used"]
+
+        total_tokens = assembled["total_tokens"]
+
+
+
+        # -----------------------------
+        # 3. Generate answer
+        # -----------------------------
+
         answer = await self.generator.generate(
             question=query,
             context=context,
         )
 
-        # Build sources
-        sources = []
 
-        for chunk in chunks:
-            if isinstance(chunk, dict):
-                sources.append(
-                    chunk.get("source")
-                    or chunk.get("metadata")
-                    or chunk.get("content")
-                    or chunk.get("text")
-                )
-            else:
-                if hasattr(chunk, "source"):
-                    sources.append(chunk.source)
-                elif hasattr(chunk, "metadata"):
-                    sources.append(chunk.metadata)
-                elif hasattr(chunk, "content"):
-                    sources.append(chunk.content)
-                elif hasattr(chunk, "text"):
-                    sources.append(chunk.text)
-                else:
-                    sources.append(str(chunk))
+        latency = (
+            time.perf_counter()
+            -
+            start_time
+        ) * 1000
+
+
+
+        # -----------------------------
+        # 4. Final response
+        # -----------------------------
 
         return {
+
             "query": query,
+
             "answer": answer,
+
             "context": context,
-            "sources": sources,
+
+            "context_metadata": {
+
+                "chunks_used": len(
+                    used_chunks
+                ),
+
+                "total_tokens": total_tokens,
+
+                "sources": sources,
+
+            },
+
+            "retrieved_chunks": len(chunks),
+
+            "latency_ms": round(
+                latency,
+                2
+            ),
+
         }

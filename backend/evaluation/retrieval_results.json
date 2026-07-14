@@ -1,0 +1,68 @@
+{
+    "total_queries": 6,
+    "hits": 6,
+    "hit_rate": 1.0,
+    "mrr": 1.0,
+    "details": [
+        {
+            "query": "What is HNSW indexing?",
+            "hit": true,
+            "rank": 1,
+            "retrieved_chunk_ids": [
+                "b568de47-3ee1-4b61-8dc2-1bf00f1ebea9",
+                "701be48f-612c-406c-a7d3-a0af9bcf3295",
+                "3aec4f87-47e2-4e4e-8d18-c252db288c6f"
+            ]
+        },
+        {
+            "query": "Explain hierarchical navigable small world algorithm",
+            "hit": true,
+            "rank": 1,
+            "retrieved_chunk_ids": [
+                "b568de47-3ee1-4b61-8dc2-1bf00f1ebea9",
+                "3aec4f87-47e2-4e4e-8d18-c252db288c6f",
+                "701be48f-612c-406c-a7d3-a0af9bcf3295"
+            ]
+        },
+        {
+            "query": "How does transformer attention work?",
+            "hit": true,
+            "rank": 1,
+            "retrieved_chunk_ids": [
+                "701be48f-612c-406c-a7d3-a0af9bcf3295",
+                "b568de47-3ee1-4b61-8dc2-1bf00f1ebea9",
+                "3aec4f87-47e2-4e4e-8d18-c252db288c6f"
+            ]
+        },
+        {
+            "query": "What are attention weights?",
+            "hit": true,
+            "rank": 1,
+            "retrieved_chunk_ids": [
+                "701be48f-612c-406c-a7d3-a0af9bcf3295",
+                "b568de47-3ee1-4b61-8dc2-1bf00f1ebea9",
+                "3aec4f87-47e2-4e4e-8d18-c252db288c6f"
+            ]
+        },
+        {
+            "query": "What are vector embeddings?",
+            "hit": true,
+            "rank": 1,
+            "retrieved_chunk_ids": [
+                "3aec4f87-47e2-4e4e-8d18-c252db288c6f",
+                "b568de47-3ee1-4b61-8dc2-1bf00f1ebea9",
+                "701be48f-612c-406c-a7d3-a0af9bcf3295"
+            ]
+        },
+        {
+            "query": "How are embeddings used in semantic search?",
+            "hit": true,
+            "rank": 1,
+            "retrieved_chunk_ids": [
+                "3aec4f87-47e2-4e4e-8d18-c252db288c6f",
+                "b568de47-3ee1-4b61-8dc2-1bf00f1ebea9",
+                "701be48f-612c-406c-a7d3-a0af9bcf3295"
+            ]
+        }
+    ]
+}
