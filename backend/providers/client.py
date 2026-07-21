@@ -2,7 +2,6 @@ import time
 from typing import Dict
 
 import redis.asyncio as redis
-
 from opentelemetry import trace
 
 from .base import (
@@ -18,56 +17,49 @@ from .router import (
 
 
 class NeuroFlowClient:
+    """
+    Central client responsible for routing requests to the
+    appropriate LLM provider while collecting metrics and traces.
+    """
 
     _instance = None
-
 
     def __new__(
         cls,
         *args,
-        **kwargs
+        **kwargs,
     ):
-
         if cls._instance is None:
-
-            cls._instance = super().__new__(
-                cls
-            )
+            cls._instance = super().__new__(cls)
 
         return cls._instance
-
-
 
     def __init__(
         self,
         router: ModelRouter,
         redis_client: redis.Redis,
     ):
-
         self.router = router
-
         self.redis = redis_client
 
         self.providers: Dict[
             str,
-            BaseLLMProvider
+            BaseLLMProvider,
         ] = {}
 
         self.tracer = trace.get_tracer(
             "neuroflow"
         )
 
-
-
     def register_provider(
         self,
         name: str,
         provider: BaseLLMProvider,
     ):
-
+        """
+        Register an LLM provider.
+        """
         self.providers[name] = provider
-
-
 
     async def chat(
         self,
@@ -75,196 +67,177 @@ class NeuroFlowClient:
         routing_criteria: RoutingCriteria,
         **kwargs,
     ) -> GenerationResult:
+        """
+        Generate a complete response.
+        """
 
-
-        # 1. Select model using router
-
+        # Select model
         selected_model = await self.router.route(
             routing_criteria
         )
 
-
         model_name = selected_model["model"]
-
         provider_name = selected_model["provider"]
 
-
-
-        # 2. Find provider
-
+        # Find provider
         provider = self.providers.get(
             provider_name
         )
 
-
         if provider is None:
-
             raise ValueError(
                 f"Provider {provider_name} not registered"
             )
-
-
-
-        # 3. OpenTelemetry span
 
         with self.tracer.start_as_current_span(
             "llm.chat"
         ) as span:
 
-
             start = time.perf_counter()
-
-
-
-            # 4. Execute LLM call
 
             result = await provider.complete(
                 messages,
                 **kwargs,
             )
 
-
-
             latency = (
-                time.perf_counter()
-                -
-                start
+                time.perf_counter() - start
             ) * 1000
-
-
-
-            # 5. Add tracing attributes
-
 
             span.set_attribute(
                 "model",
-                model_name
+                model_name,
             )
-
 
             span.set_attribute(
                 "input_tokens",
-                result.input_tokens
+                result.input_tokens,
             )
-
 
             span.set_attribute(
                 "output_tokens",
-                result.output_tokens
+                result.output_tokens,
             )
-
 
             span.set_attribute(
                 "cost_usd",
-                result.cost_usd
+                result.cost_usd,
             )
-
 
             span.set_attribute(
                 "latency_ms",
-                latency
+                latency,
             )
-
-
-
-        # 6. Redis metrics
-
 
         await self.redis.incr(
             f"metrics:model:{model_name}:calls"
         )
 
-
         await self.redis.incrbyfloat(
             f"metrics:model:{model_name}:cost_usd",
-            result.cost_usd
+            result.cost_usd,
         )
 
-
-
         return result
-
-
-
 
     async def embed(
         self,
         texts: list[str],
     ) -> list[list[float]]:
-
-
+        """
+        Generate embeddings using the registered embedding provider.
+        """
 
         provider = None
 
-
-
-        # Find embedding provider
-
         for registered_provider in self.providers.values():
-
 
             if hasattr(
                 registered_provider,
-                "embed"
+                "embed",
             ):
-
                 provider = registered_provider
-
                 break
 
-
-
-
         if provider is None:
-
             raise ValueError(
                 "No embedding provider registered"
             )
-
-
 
         with self.tracer.start_as_current_span(
             "llm.embed"
         ) as span:
 
-
-
             start = time.perf_counter()
-
-
 
             embeddings = await provider.embed(
                 texts
             )
 
-
-
             latency = (
-                time.perf_counter()
-                -
-                start
+                time.perf_counter() - start
             ) * 1000
-
-
-
 
             span.set_attribute(
                 "operation",
-                "embedding"
+                "embedding",
             )
-
 
             span.set_attribute(
                 "input_text_count",
-                len(texts)
+                len(texts),
             )
-
 
             span.set_attribute(
                 "latency_ms",
-                latency
+                latency,
             )
 
-
-
         return embeddings
+
+    async def stream(
+        self,
+        messages: list[ChatMessage],
+        routing_criteria: RoutingCriteria,
+        **kwargs,
+    ):
+        """
+        Stream tokens from the selected provider.
+        """
+
+        # Select model
+        selected_model = await self.router.route(
+            routing_criteria
+        )
+
+        model_name = selected_model["model"]
+        provider_name = selected_model["provider"]
+
+        # Find provider
+        provider = self.providers.get(
+            provider_name
+        )
+
+        if provider is None:
+            raise ValueError(
+                f"Provider {provider_name} not registered"
+            )
+
+        with self.tracer.start_as_current_span(
+            "llm.stream"
+        ) as span:
+
+            span.set_attribute(
+                "model",
+                model_name,
+            )
+
+            async for token in provider.stream(
+                messages,
+                **kwargs,
+            ):
+                yield token
+
+        await self.redis.incr(
+            f"metrics:model:{model_name}:stream_calls"
+        )

@@ -10,9 +10,8 @@ from backend.database.connection import db
 async def lifespan(app: FastAPI):
     """
     Application startup and shutdown.
-    Creates a fresh database connection pool on startup
-    and closes it safely on shutdown.
     """
+
     await db.connect()
 
     yield
@@ -20,28 +19,49 @@ async def lifespan(app: FastAPI):
     try:
         await db.disconnect()
     except Exception:
-        # Ignore shutdown errors during testing
         pass
+
 
 
 app = FastAPI(
     title="NeuroFlow",
+    version="0.1.0",
     lifespan=lifespan,
 )
 
-# Register API routes
-app.include_router(query_router)
 
+# -----------------------------
+# Register Query API
+# -----------------------------
+
+app.include_router(
+    query_router,
+    prefix=""
+)
+
+
+print("QUERY ROUTER REGISTERED")
+for route in app.routes:
+    print(route)
+
+
+
+# -----------------------------
+# Health Routes
+# -----------------------------
 
 @app.get("/")
 async def root():
+
     return {
         "message": "NeuroFlow API running"
     }
 
 
+
 @app.get("/health")
 async def health():
+
     return {
         "status": "ok",
         "checks": {
@@ -52,6 +72,8 @@ async def health():
     }
 
 
+
 @app.get("/metrics")
 async def metrics():
+
     return "neuroflow_requests_total 0"

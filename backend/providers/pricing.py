@@ -6,9 +6,9 @@ Prices are in USD per TOKEN (converted from USD per 1M tokens).
 
 PRICE_TABLE = {
 
-    # ---------------------------
+    # -------------------------------------------------
     # OpenAI Models
-    # ---------------------------
+    # -------------------------------------------------
 
     "gpt-4o": {
         "input": 2.50 / 1_000_000,
@@ -20,9 +20,22 @@ PRICE_TABLE = {
         "output": 0.60 / 1_000_000,
     },
 
-    # ---------------------------
+    # -------------------------------------------------
+    # OpenRouter Models
+    # -------------------------------------------------
+
+    # Currently using the OpenRouter hosted Llama model.
+    # Set to 0 while using the free/testing tier.
+    # Update these values if you switch to the paid model.
+
+    "meta-llama/llama-3.1-8b-instruct": {
+        "input": 0.0,
+        "output": 0.0,
+    },
+
+    # -------------------------------------------------
     # Anthropic Models
-    # ---------------------------
+    # -------------------------------------------------
 
     "claude-3-haiku": {
         "input": 0.25 / 1_000_000,
@@ -33,5 +46,4 @@ PRICE_TABLE = {
         "input": 3.00 / 1_000_000,
         "output": 15.00 / 1_000_000,
     },
-
 }

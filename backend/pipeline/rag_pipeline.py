@@ -1,5 +1,6 @@
 from typing import Any
 import time
+from uuid import UUID
 
 from backend.retrieval.retriever import Retriever
 from backend.retrieval.context_assembler import ContextAssembler
@@ -8,29 +9,18 @@ from backend.generation.generator import Generator
 
 class RAGPipeline:
     """
-    End-to-End Retrieval Augmented Generation pipeline.
+    End-to-End Retrieval Augmented Generation Pipeline.
 
     Flow:
-
     User Query
-        |
         ↓
-    Hybrid Retrieval
-        |
+    Retriever
         ↓
-    RRF Fusion
-        |
-        ↓
-    Cross Encoder Reranking
-        |
-        ↓
-    Context Assembly
-        |
+    Context Assembler
         ↓
     Generator
-        |
         ↓
-    Final Answer
+    Response
     """
 
     def __init__(
@@ -40,107 +30,150 @@ class RAGPipeline:
         context_assembler=None,
     ):
 
-        self.retriever = (
-            retriever
-            or Retriever()
-        )
+        self.retriever = retriever or Retriever()
 
-        self.generator = (
-            generator
-            or Generator()
-        )
+        if generator is None:
+            raise ValueError(
+                "Generator instance required"
+            )
+
+        self.generator = generator
 
         self.context_assembler = (
             context_assembler
             or ContextAssembler()
         )
 
-
     async def run(
         self,
         query: str,
+        pipeline_id: UUID,
+        stream: bool = False,
         top_k: int = 5,
-    ) -> dict[str, Any]:
+    ) -> dict[str, Any] | Any:
+        """
+        Execute complete RAG pipeline.
+        """
 
         start_time = time.perf_counter()
 
-
-        # -----------------------------
-        # 1. Retrieve relevant chunks
-        # -----------------------------
+        # --------------------------------------------------
+        # Retrieval
+        # --------------------------------------------------
 
         chunks = await self.retriever.hybrid_retrieve(
             query=query,
             k=top_k,
         )
 
-
-        # -----------------------------
-        # 2. Assemble context
-        # -----------------------------
+        # --------------------------------------------------
+        # Context Assembly
+        # --------------------------------------------------
 
         assembled = self.context_assembler.assemble(
             chunks
         )
 
-
-        context = assembled["context"]
-
-        sources = assembled["sources"]
-
-        used_chunks = assembled["chunks_used"]
-
-        total_tokens = assembled["total_tokens"]
-
-
-
-        # -----------------------------
-        # 3. Generate answer
-        # -----------------------------
-
-        answer = await self.generator.generate(
-            question=query,
-            context=context,
+        context = assembled.get(
+            "context",
+            "",
         )
 
+        sources = assembled.get(
+            "sources",
+            [],
+        )
+
+        # --------------------------------------------------
+        # Query Classification
+        # --------------------------------------------------
+
+        query_type = "factual"
+
+        if hasattr(
+            self.retriever,
+            "query_processor",
+        ):
+
+            processed = await (
+                self.retriever
+                .query_processor
+                .process(query)
+            )
+
+            query_type = processed.get(
+                "query_type",
+                "factual",
+            )
+
+        # --------------------------------------------------
+        # Streaming
+        # --------------------------------------------------
+
+        if stream:
+
+            return self.generator.stream_generate(
+                question=query,
+                context=context,
+                sources=sources,
+                pipeline_id=pipeline_id,
+                query_type=query_type,
+            )
+
+        # --------------------------------------------------
+        # Generation
+        # --------------------------------------------------
+
+        generation = await self.generator.generate(
+            question=query,
+            context=context,
+            sources=sources,
+            pipeline_id=pipeline_id,
+            query_type=query_type,
+        )
 
         latency = (
             time.perf_counter()
-            -
-            start_time
+            - start_time
         ) * 1000
-
-
-
-        # -----------------------------
-        # 4. Final response
-        # -----------------------------
 
         return {
 
+            "run_id": generation["run_id"],
+
             "query": query,
 
-            "answer": answer,
+            "query_type": query_type,
+
+            "answer": generation["answer"],
+
+            "citations": generation["citations"],
 
             "context": context,
 
             "context_metadata": {
 
                 "chunks_used": len(
-                    used_chunks
+                    assembled.get(
+                        "chunks_used",
+                        [],
+                    )
                 ),
 
-                "total_tokens": total_tokens,
+                "total_tokens": assembled.get(
+                    "total_tokens",
+                    0,
+                ),
 
                 "sources": sources,
-
             },
 
-            "retrieved_chunks": len(chunks),
+            "retrieved_chunks": len(
+                chunks
+            ),
 
             "latency_ms": round(
                 latency,
-                2
+                2,
             ),
-
         }
