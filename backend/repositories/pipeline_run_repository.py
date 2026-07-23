@@ -6,7 +6,7 @@ from backend.database.connection import db
 
 class PipelineRunRepository:
     """
-   Handles pipeline run persistence.
+    Handles pipeline run persistence.
     """
 
     def __init__(self):
@@ -79,3 +79,26 @@ class PipelineRunRepository:
                 run_id,
                 *values,
             )
+
+    async def get_run(
+        self,
+        run_id: UUID,
+    ):
+
+        sql = """
+        SELECT *
+        FROM pipeline_runs
+        WHERE id = $1
+        """
+
+        async with self.db.pool.acquire() as conn:
+
+            row = await conn.fetchrow(
+                sql,
+                run_id,
+            )
+
+        if row is None:
+            return None
+
+        return dict(row)

@@ -1,0 +1,184 @@
+[
+    {
+        "query": "What is machine learning?",
+        "answer": "Machine learning is a branch of artificial intelligence that enables computers to learn from data without being explicitly programmed.",
+        "context": "Machine learning is a subset of artificial intelligence that enables systems to learn patterns from data without explicit programming.",
+        "human_score": 1.0
+    },
+    {
+        "query": "Who developed Python?",
+        "answer": "Python was created by Guido van Rossum.",
+        "context": "Python was created by Guido van Rossum and first released in 1991.",
+        "human_score": 1.0
+    },
+    {
+        "query": "What is Redis?",
+        "answer": "Redis is an in-memory key-value database.",
+        "context": "Redis is an open-source in-memory key-value data store used as a database, cache and message broker.",
+        "human_score": 1.0
+    },
+    {
+        "query": "What is PostgreSQL?",
+        "answer": "PostgreSQL is an open-source relational database.",
+        "context": "PostgreSQL is a powerful open-source object-relational database system.",
+        "human_score": 1.0
+    },
+    {
+        "query": "What is Docker?",
+        "answer": "Docker packages applications into containers.",
+        "context": "Docker allows developers to package applications and dependencies into portable containers.",
+        "human_score": 1.0
+    },
+    {
+        "query": "What is FastAPI?",
+        "answer": "FastAPI is a Python web framework for building APIs.",
+        "context": "FastAPI is a modern Python framework designed for building high-performance APIs.",
+        "human_score": 1.0
+    },
+    {
+        "query": "What is NumPy?",
+        "answer": "NumPy is a Python library for numerical computing.",
+        "context": "NumPy provides efficient multidimensional arrays and mathematical functions.",
+        "human_score": 1.0
+    },
+    {
+        "query": "What is Pandas?",
+        "answer": "Pandas is used for data manipulation and analysis.",
+        "context": "Pandas is a Python library providing DataFrame structures for data analysis.",
+        "human_score": 1.0
+    },
+    {
+        "query": "What is Git?",
+        "answer": "Git is a distributed version control system.",
+        "context": "Git is a distributed version control system designed to track source code changes.",
+        "human_score": 1.0
+    },
+    {
+        "query": "What is OpenTelemetry?",
+        "answer": "OpenTelemetry provides observability through traces, metrics and logs.",
+        "context": "OpenTelemetry is an observability framework for traces, metrics and logs.",
+        "human_score": 1.0
+    },
+
+    {
+        "query": "What is machine learning?",
+        "answer": "Machine learning is a branch of AI developed in 1985.",
+        "context": "Machine learning is a branch of AI.",
+        "human_score": 0.75
+    },
+    {
+        "query": "Who created Linux?",
+        "answer": "Linux was created by Linus Torvalds in Finland.",
+        "context": "Linux was created by Linus Torvalds.",
+        "human_score": 0.75
+    },
+    {
+        "query": "What is Docker?",
+        "answer": "Docker packages applications into containers and was released in 2013.",
+        "context": "Docker packages applications into containers.",
+        "human_score": 0.75
+    },
+    {
+        "query": "What is Redis?",
+        "answer": "Redis is an in-memory database that supports persistence.",
+        "context": "Redis is an in-memory key-value store.",
+        "human_score": 0.75
+    },
+    {
+        "query": "What is PostgreSQL?",
+        "answer": "PostgreSQL is a relational database supporting SQL.",
+        "context": "PostgreSQL is a relational database.",
+        "human_score": 0.75
+    },
+    {
+        "query": "What is FastAPI?",
+        "answer": "FastAPI is a Python framework that automatically generates OpenAPI documentation.",
+        "context": "FastAPI is a Python API framework.",
+        "human_score": 0.75
+    },
+    {
+        "query": "What is Git?",
+        "answer": "Git tracks code changes and supports branching.",
+        "context": "Git tracks source code changes.",
+        "human_score": 0.75
+    },
+    {
+        "query": "What is NumPy?",
+        "answer": "NumPy supports numerical computing and multidimensional arrays.",
+        "context": "NumPy supports numerical computing.",
+        "human_score": 0.75
+    },
+    {
+        "query": "What is Pandas?",
+        "answer": "Pandas provides DataFrames and supports CSV reading.",
+        "context": "Pandas provides DataFrames.",
+        "human_score": 0.75
+    },
+    {
+        "query": "What is Python?",
+        "answer": "Python is an interpreted programming language released in 1991.",
+        "context": "Python is an interpreted programming language.",
+        "human_score": 0.75
+    },
+
+    {
+        "query": "Who invented Python?",
+        "answer": "Python was invented by James Gosling.",
+        "context": "Python was created by Guido van Rossum.",
+        "human_score": 0.0
+    },
+    {
+        "query": "What is Redis?",
+        "answer": "Redis is a relational database.",
+        "context": "Redis is an in-memory key-value database.",
+        "human_score": 0.0
+    },
+    {
+        "query": "What is PostgreSQL?",
+        "answer": "PostgreSQL is a NoSQL document database.",
+        "context": "PostgreSQL is a relational database.",
+        "human_score": 0.0
+    },
+    {
+        "query": "What is Docker?",
+        "answer": "Docker is a programming language.",
+        "context": "Docker is a container platform.",
+        "human_score": 0.0
+    },
+    {
+        "query": "What is Git?",
+        "answer": "Git is a web browser.",
+        "context": "Git is a version control system.",
+        "human_score": 0.0
+    },
+    {
+        "query": "What is NumPy?",
+        "answer": "NumPy is a relational database.",
+        "context": "NumPy is a numerical computing library.",
+        "human_score": 0.0
+    },
+    {
+        "query": "What is Pandas?",
+        "answer": "Pandas is a Java framework.",
+        "context": "Pandas is a Python data analysis library.",
+        "human_score": 0.0
+    },
+    {
+        "query": "What is FastAPI?",
+        "answer": "FastAPI is a machine learning algorithm.",
+        "context": "FastAPI is a Python API framework.",
+        "human_score": 0.0
+    },
+    {
+        "query": "What is OpenTelemetry?",
+        "answer": "OpenTelemetry is a database engine.",
+        "context": "OpenTelemetry provides observability.",
+        "human_score": 0.0
+    },
+    {
+        "query": "What is Linux?",
+        "answer": "Linux was developed by Bill Gates.",
+        "context": "Linux was created by Linus Torvalds.",
+        "human_score": 0.0
+    }
+]

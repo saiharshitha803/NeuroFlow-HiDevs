@@ -1,9 +1,16 @@
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 
-from backend.api.query import router as query_router
 from backend.database.connection import db
+
+from backend.api.query import router as query_router
+from backend.api.rating import router as rating_router
+
+from backend.queue.evaluation_queue import (
+    process_evaluation_queue,
+)
 
 
 @asynccontextmanager
@@ -12,15 +19,42 @@ async def lifespan(app: FastAPI):
     Application startup and shutdown.
     """
 
+    # ---------------------------------
+    # Connect Database
+    # ---------------------------------
+
     await db.connect()
+
+    print("Connected to PostgreSQL")
+
+    # ---------------------------------
+    # Start Evaluation Worker
+    # ---------------------------------
+
+    evaluation_worker = asyncio.create_task(
+        process_evaluation_queue()
+    )
+
+    print("Evaluation worker started.")
 
     yield
 
-    try:
-        await db.disconnect()
-    except Exception:
-        pass
+    # ---------------------------------
+    # Shutdown Worker
+    # ---------------------------------
 
+    evaluation_worker.cancel()
+
+    with suppress(asyncio.CancelledError):
+        await evaluation_worker
+
+    # ---------------------------------
+    # Disconnect Database
+    # ---------------------------------
+
+    await db.disconnect()
+
+    print("Disconnected from PostgreSQL")
 
 
 app = FastAPI(
@@ -29,26 +63,27 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-
-# -----------------------------
-# Register Query API
-# -----------------------------
+# ---------------------------------
+# Register Routers
+# ---------------------------------
 
 app.include_router(
     query_router,
-    prefix=""
 )
 
+app.include_router(
+    rating_router,
+)
 
 print("QUERY ROUTER REGISTERED")
+
 for route in app.routes:
     print(route)
 
 
-
-# -----------------------------
-# Health Routes
-# -----------------------------
+# ---------------------------------
+# Root
+# ---------------------------------
 
 @app.get("/")
 async def root():
@@ -58,6 +93,9 @@ async def root():
     }
 
 
+# ---------------------------------
+# Health
+# ---------------------------------
 
 @app.get("/health")
 async def health():
@@ -72,6 +110,9 @@ async def health():
     }
 
 
+# ---------------------------------
+# Metrics
+# ---------------------------------
 
 @app.get("/metrics")
 async def metrics():

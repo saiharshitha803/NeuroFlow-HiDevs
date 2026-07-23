@@ -3,7 +3,7 @@ import asyncio
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
 
 import redis.asyncio as redis
@@ -21,12 +21,15 @@ from backend.repositories.pipeline_repository import (
     PipelineRepository,
 )
 
+from backend.repositories.evaluation_repository import (
+    EvaluationRepository,
+)
+
 
 router = APIRouter(
     prefix="/api",
     tags=["Query"],
 )
-
 
 # --------------------------------------------------
 # Redis
@@ -39,18 +42,16 @@ redis_client = redis.Redis(
     decode_responses=True,
 )
 
-
 # --------------------------------------------------
-# Router
+# Model Router
 # --------------------------------------------------
 
 model_router = ModelRouter(
     redis_client=redis_client,
 )
 
-
 # --------------------------------------------------
-# Client
+# LLM Client
 # --------------------------------------------------
 
 llm_client = NeuroFlowClient(
@@ -66,6 +67,9 @@ llm_client.register_provider(
     ),
 )
 
+# --------------------------------------------------
+# Generator
+# --------------------------------------------------
 
 generator = Generator(
     client=llm_client,
@@ -77,143 +81,118 @@ rag_pipeline = RAGPipeline(
 
 pipeline_repo = PipelineRepository()
 
+evaluation_repo = EvaluationRepository()
 
-# --------------------------------------------------
-# Request
-# --------------------------------------------------
+# ==================================================
+# Request Models
+# ==================================================
+
 
 class QueryRequest(BaseModel):
-
-    query: str = Field(
-        ...,
-        min_length=3,
-    )
-
-    pipeline_id: UUID | None = None
-
+    query: str
+    pipeline_id: UUID
     stream: bool = False
 
 
-# --------------------------------------------------
-# POST /query
-# --------------------------------------------------
+class RatingRequest(BaseModel):
+    rating: int
+
+
+# ==================================================
+# Query Endpoint
+# ==================================================
 
 @router.post("/query")
-async def query(
-    request: QueryRequest,
-):
+async def query(request: QueryRequest):
 
-    try:
-
-        pipeline_id = request.pipeline_id
-
-        if pipeline_id is None:
-
-            pipeline = await pipeline_repo.get_pipeline_by_name(
-                "default"
-            )
-
-            if pipeline is None:
-
-                pipeline_id = await pipeline_repo.create_pipeline(
-                    name="default",
-                    config={},
-                )
-
-            else:
-
-                pipeline_id = pipeline["id"]
-
-        if request.stream:
-
-            return JSONResponse(
-                {
-                    "run_id": "pending",
-                    "message":
-                        "Connect to "
-                        "/api/query/pending/stream",
-                }
-            )
-
-        result = await rag_pipeline.run(
-            query=request.query,
-            pipeline_id=pipeline_id,
-            stream=False,
-        )
-
-        return result
-
-    except Exception as e:
-
-        raise HTTPException(
-            status_code=500,
-            detail=str(e),
-        )
-
-
-# --------------------------------------------------
-# GET /query/{run_id}/stream
-# --------------------------------------------------
-
-@router.get(
-    "/query/{run_id}/stream"
-)
-async def stream_query(
-    run_id: str,
-):
-
-    async def event_generator():
-
-        yield {
-            "event": "message",
-            "data": '{"type":"retrieval_start"}',
-        }
-
-        await asyncio.sleep(1)
-
-        yield {
-            "event": "message",
-            "data": '{"type":"retrieval_complete"}',
-        }
-
-        demo_tokens = [
-            "Based",
-            " on",
-            " the",
-            " retrieved",
-            " documents,",
-            " HNSW",
-            " indexing",
-            " builds",
-            " a",
-            " graph",
-            " for",
-            " approximate",
-            " nearest",
-            " neighbor",
-            " search.",
-        ]
-
-        for token in demo_tokens:
-
-            yield {
-                "event": "message",
-                "data": (
-                    f'{{"type":"token","delta":"{token}"}}'
-                ),
-            }
-
-            await asyncio.sleep(0.15)
-
-        yield {
-            "event": "message",
-            "data": '{"type":"done"}',
-        }
-
-    return EventSourceResponse(
-        event_generator()
+    pipeline = await pipeline_repo.get_pipeline(
+        request.pipeline_id
     )
 
+    if pipeline is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Pipeline not found",
+        )
 
-print("QUERY ROUTER LOADED")
-print(router.routes)
+    if request.stream:
+
+        async def event_generator():
+
+            async for event in rag_pipeline.run(
+                query=request.query,
+                pipeline_id=request.pipeline_id,
+                stream=True,
+            ):
+
+                yield event
+
+        return EventSourceResponse(
+            event_generator()
+        )
+
+    result = await rag_pipeline.run(
+        query=request.query,
+        pipeline_id=request.pipeline_id,
+        stream=False,
+    )
+
+    return JSONResponse(result)
+
+
+# ==================================================
+# User Rating Endpoint
+# ==================================================
+
+@router.patch("/runs/{run_id}/rating")
+async def rate_run(
+    run_id: UUID,
+    request: RatingRequest,
+):
+
+    if request.rating < 1 or request.rating > 5:
+
+        raise HTTPException(
+            status_code=400,
+            detail="Rating must be between 1 and 5",
+        )
+
+    await evaluation_repo.update_user_rating(
+        run_id,
+        request.rating,
+    )
+
+    evaluation = await evaluation_repo.get_evaluation(
+        run_id,
+    )
+
+    if evaluation is None:
+
+        raise HTTPException(
+            status_code=404,
+            detail="Evaluation not found",
+        )
+
+    automated = evaluation["overall_score"]
+
+    human = request.rating / 5
+
+    calibration_needed = (
+        abs(
+            automated - human
+        ) > 0.3
+    )
+
+    metadata = {
+        "calibration_needed": calibration_needed
+    }
+
+    await evaluation_repo.update_metadata(
+        run_id,
+        metadata,
+    )
+
+    return {
+        "message": "Rating stored successfully",
+        "calibration_needed": calibration_needed,
+    }

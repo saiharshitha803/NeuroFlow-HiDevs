@@ -7,16 +7,37 @@ from backend.config import settings
 
 
 MODELS = [
+    # ---------------------------------------------------------
+    # Default Generation Model
+    # ---------------------------------------------------------
     {
-        "model": "gpt-4o-mini",
+        "model": settings.GENERATION_MODEL,
         "provider": "openai",
         "task_type": "generation",
-        "estimated_cost": 0.001,
+        "estimated_cost": 0.0,
         "vision": False,
         "context": 128000,
         "fine_tuned": False,
         "judge": False,
     },
+
+    # ---------------------------------------------------------
+    # Evaluation / Judge Model
+    # ---------------------------------------------------------
+    {
+        "model": settings.GENERATION_MODEL,
+        "provider": "openai",
+        "task_type": "evaluation",
+        "estimated_cost": 0.0,
+        "vision": False,
+        "context": 128000,
+        "fine_tuned": False,
+        "judge": True,
+    },
+
+    # ---------------------------------------------------------
+    # Vision Model
+    # ---------------------------------------------------------
     {
         "model": "gpt-4o",
         "provider": "openai",
@@ -27,6 +48,10 @@ MODELS = [
         "fine_tuned": False,
         "judge": False,
     },
+
+    # ---------------------------------------------------------
+    # Long Context Model
+    # ---------------------------------------------------------
     {
         "model": "claude-3-haiku",
         "provider": "anthropic",
