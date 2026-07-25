@@ -9,6 +9,9 @@ from backend.providers.router import ModelRouter
 from backend.providers.openai_provider import OpenAIProvider
 
 from backend.evaluation.judge import EvaluationJudge
+from backend.repositories.training_pair_repository import (
+    TrainingPairRepository,
+)
 
 from backend.repositories.pipeline_run_repository import (
     PipelineRunRepository,
@@ -62,6 +65,7 @@ judge = EvaluationJudge(client)
 
 pipeline_runs = PipelineRunRepository()
 
+training_pairs = TrainingPairRepository()
 
 # ---------------------------------------
 # Producer

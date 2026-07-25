@@ -1,5 +1,6 @@
 import asyncio
 import time
+from dataclasses import asdict
 from uuid import UUID
 
 from backend.providers.client import NeuroFlowClient
@@ -84,6 +85,16 @@ class Generator:
                 result.content,
                 sources,
             )
+
+            # ----------------------------------------
+            # Convert Citation dataclasses to dicts
+            # ----------------------------------------
+            citations = [
+                asdict(c)
+                if hasattr(c, "__dataclass_fields__")
+                else c
+                for c in citations
+            ]
 
             await self.pipeline_runs.update_run(
                 run_id,
@@ -176,6 +187,16 @@ class Generator:
                 full_response,
                 sources,
             )
+
+            # ----------------------------------------
+            # Convert Citation dataclasses to dicts
+            # ----------------------------------------
+            citations = [
+                asdict(c)
+                if hasattr(c, "__dataclass_fields__")
+                else c
+                for c in citations
+            ]
 
             await self.pipeline_runs.update_run(
                 run_id,

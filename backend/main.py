@@ -1,13 +1,13 @@
 import asyncio
 from contextlib import asynccontextmanager, suppress
-
+from backend.api.evaluations import router as evaluation_router
 from fastapi import FastAPI
 
 from backend.database.connection import db
 
 from backend.api.query import router as query_router
 from backend.api.rating import router as rating_router
-
+from backend.api.pipeline import router as pipeline_router
 from backend.queue.evaluation_queue import (
     process_evaluation_queue,
 )
@@ -74,6 +74,11 @@ app.include_router(
 app.include_router(
     rating_router,
 )
+
+app.include_router(
+    evaluation_router,
+) 
+app.include_router(pipeline_router)
 
 print("QUERY ROUTER REGISTERED")
 

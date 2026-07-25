@@ -53,10 +53,7 @@ class EvaluationJudge:
 
         self.training_pairs = TrainingPairRepository()
 
-        # OpenTelemetry tracer
-        self.tracer = trace.get_tracer(
-            "neuroflow"
-        )
+        self.tracer = trace.get_tracer("neuroflow")
 
     async def evaluate(
         self,
@@ -65,6 +62,11 @@ class EvaluationJudge:
         answer,
         context,
     ):
+
+        print("\n" + "=" * 70)
+        print("STARTING EVALUATION")
+        print("=" * 70)
+        print("Run ID:", run_id)
 
         with self.tracer.start_as_current_span(
             "evaluation.judge"
@@ -108,7 +110,15 @@ class EvaluationJudge:
                 + 0.15 * context_recall
             )
 
-            # OpenTelemetry attributes
+            print("\nEvaluation Scores")
+            print("-" * 70)
+            print(f"Faithfulness      : {faithfulness}")
+            print(f"Answer Relevance  : {answer_relevance}")
+            print(f"Context Precision : {context_precision}")
+            print(f"Context Recall    : {context_recall}")
+            print(f"Overall Score     : {overall}")
+            print("-" * 70)
+
             span.set_attribute(
                 "faithfulness",
                 faithfulness,
@@ -134,6 +144,8 @@ class EvaluationJudge:
                 overall,
             )
 
+            print("\nSaving evaluation to database...")
+
             await self.evaluations.create_evaluation(
                 run_id=run_id,
                 faithfulness=faithfulness,
@@ -144,14 +156,41 @@ class EvaluationJudge:
                 judge_model="evaluation-model",
             )
 
-            if overall > 0.8:
+            print("Evaluation saved successfully.")
 
-                await self.training_pairs.create_training_pair(
-                    run_id=run_id,
-                    user_message=query,
-                    assistant_message=answer,
-                    quality_score=overall,
+            if overall >= 0.80:
+
+                print("\nOverall >= 0.80")
+                print("Creating training pair...")
+
+                try:
+
+                    await self.training_pairs.create(
+                        run_id=run_id,
+                        system_prompt=context,
+                        user_message=query,
+                        assistant_message=answer,
+                        quality_score=overall,
+                    )
+
+                    print("Training pair created successfully!")
+
+                except Exception as e:
+
+                    print("\nFAILED TO CREATE TRAINING PAIR")
+                    print(type(e).__name__)
+                    print(e)
+
+            else:
+
+                print(
+                    f"\nOverall score ({overall:.3f}) is below 0.80."
                 )
+                print("Training pair NOT created.")
+
+            print("=" * 70)
+            print("EVALUATION FINISHED")
+            print("=" * 70)
 
             return {
                 "faithfulness": faithfulness,
